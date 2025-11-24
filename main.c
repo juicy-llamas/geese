@@ -1,76 +1,57 @@
-//Using SDL and standard IO
-#include <SDL2/SDL.h>
-#include <stdio.h>
+// Include gtk
+#include <gtk/gtk.h>
+#include "miniaudio.h"
+#include <stdlib.h>
+#include <printf.h>
 
-#define sdlerr( stuff ) do {                                \
-    printf( stuff " SDL Error: %s\n", SDL_GetError() );     \
-    return 1;                                               \
-} while( 0 );
+struct config {
+    char* image_name;
+};
+
+static void on_activate ( GtkApplication *app, void* user_data ) {
+    struct config* conf = (struct config*)user_data;
+    GError* err;
+	// Create a new window
+	GtkWidget* window = gtk_application_window_new( app );
+    GdkPixbuf* imgbuf = gdk_pixbuf_new_from_file( conf->image_name, err );
+    if ( err ) {
+        imgbuf = gdk_pixbuf_new_from_file( "geese.jpg", err );
+        if ( err ) {
+            printf( "oh no" );
+            return;
+        }
+    }
+    GtkWidget* image = gtk_image_new_from_pixbuf( imgbuf );
+    gtk_container_add( GTK_WINDOW( window ), image );
+	gtk_window_present( GTK_WINDOW( window ) );
+}
 
 int main ( int argc, char** argv ) {
-    printf( "yep it is doing something\n" );
+    // We don't have to free this--I just don't want it to
+    // disappear in case main returns.
+    struct config* conf = malloc( sizeof( struct config ) );
+    conf->image_name = "geese.jpg";
 
-    SDL_Window* window = 0;
-    SDL_Surface* screenSurface, image;
-    SDL_Event e;
-    
-    // sound
-    SDL_AudioSpec s_want, s_have;
-    SDL_AudioDeviceID s_dev;
-    Uint32 s_len;
-    Uint8* s_buf;
+    ma_result result;
+    ma_engine engine;
 
-    // sdl init
-    if ( SDL_Init( SDL_INIT_VIDEO ) < 0 )
-        sdlerr( "SDL could not initialize!" );
-    
-    // window init
-    window = SDL_CreateWindow( "geese", SDL_WINDOWPOS_UNDEFINED, 
-            SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 
-            SDL_WINDOWPOS_UNDEFINED, SDL_WINDOW_SHOWN );
-
-    if ( window == 0 )
-        sdlerr( "Window couldn't start." );
-
-    // image load
-    image = IMG_Load( "~/.local/share/geese/geese.jpg" );
-
-    if ( image == 0 )
-        sdlerr( "Image didn't load." );
-
-    // put the img on the window
-    screenSurface = SDL_GetWindowSurface( window );
-    
-    SDL_FillRect( screenSurface, 0, SDL_MapRGB( screenSurface->format,
-            0xFF, 0x00, 0xFF ) );
-    
-    SDL_UpdateWindowSurface( window );
-
-    // load audio
-    
-    SDL_memset( &s_want
-    if ( SDL_LoadWAV( "~/.local/share/geese/geese.wav", &s_want, &s_buf, 
-                &s_len ) )
-        sdlerr( "Wav didn't load." );
-
-    s_dev = SDL_OpenAudioDevice( 0, 0, &s_want, &s_have, 
-            SDL_ALLOW_AUDIO_FORMAT_CHANGE );
-    
-    if ( s_dev == 0 )
-        sdlerr( "Failed to get audio device." );
-
-    if ( SDL_QueueAudio( s_dev, s_buf, s_len ) < 0 )
-        sdlerr( "Failed to queue audio." );
-
-    // SDL_Delay( 42000 );
-    while ( 1 ) {
-        if ( SDL_PollEvent( &e ) && e.type == SDL_QUIT )
-            break;
+    if (argc < 2) {
+        printf("No input file.");
+        return -1;
     }
 
-    SDL_FreeWAV( s_buf );
-    SDL_DestroyWindow( window );
-    SDL_Quit();
+    result = ma_engine_init(NULL, &engine);
+    if ( result != MA_SUCCESS ) {
+        printf( "Failed to initialize audio engine." );
+        return -1;
+    }
 
-    return 0;
+    ma_engine_play_sound( &engine, "geese.wav", NULL );
+
+	// Create a new GTK application
+	GtkApplication* app = gtk_application_new(
+            "com.example.GtkApplication", G_APPLICATION_FLAGS_NONE );
+	g_signal_connect( app, "activate", G_CALLBACK( on_activate ), conf );
+	return g_application_run( G_APPLICATION( app ), argc, argv );
 }
+
