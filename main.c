@@ -31,6 +31,11 @@ int main ( int argc, char** argv ) {
   struct config* conf = malloc( sizeof( struct config ) );
   conf->image_name = "geese.jpg";
 
+  // Create a new GTK application
+	GtkApplication* app = gtk_application_new(
+            "com.example.GtkApplication", G_APPLICATION_DEFAULT_FLAGS );
+	g_signal_connect( app, "activate", G_CALLBACK( on_activate ), conf );
+
   ma_result result;
   ma_engine engine;
 
@@ -42,10 +47,8 @@ int main ( int argc, char** argv ) {
 
   ma_engine_play_sound( &engine, "geese.wav", NULL );
 
-	// Create a new GTK application
-	GtkApplication* app = gtk_application_new(
-            "com.example.GtkApplication", G_APPLICATION_DEFAULT_FLAGS );
-	g_signal_connect( app, "activate", G_CALLBACK( on_activate ), conf );
-	return g_application_run( G_APPLICATION( app ), argc, argv );
+	int ret = g_application_run( G_APPLICATION( app ), argc, argv );
+
+  return ret;
 }
 
